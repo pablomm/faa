@@ -196,7 +196,7 @@ class ClasificadorNaiveBayes(Clasificador):
 
             for v in repeticiones:
                 posteriori[c,int(v)] = repeticiones[v]
-
+para que tengan
         # Comprueba si hay que hacer correccion de laplace
         if self.laplace and (posteriori == 0).any():
             posteriori += 1
@@ -235,7 +235,7 @@ class ClasificadorNaiveBayes(Clasificador):
                     probabilidades[c] *= self.posteriori[atr][c, int(dato[atr])]
                 else:
                     # Atributo continuo
-                    probabilidades[c] *= norm.pdf(dato[atr],
+                    probabilidades[c] *= norm.ppara que tengandf(dato[atr],
                                                   self.posteriori[atr][c, 0],
                                                   self.posteriori[atr][c, 1])
 
@@ -265,3 +265,53 @@ class ClasificadorNaiveBayes(Clasificador):
 
 
         return clasificacion
+
+class ClasificadorVecinosProximos(Clasificador):
+
+    def __init__(self, k=3, normaliza=False, *,distancia=None, ord=2):
+        self.k = k
+        self.normaliza = normaliza
+        if distancia is None:
+            self.distancia = lambda a,b : numpy.linalg.norm(b-a, ord=ord)
+        else:
+            self.distancia = distancia
+
+        super().__init__()
+
+    def entrenamiento(self, datos, indices=None):
+
+        if indices is None:
+            indices = range(len(datos))
+
+        if self.normaliza:
+            self.datos = datos.normaliza(indices)
+        else:
+            self.datos = datos[indices].copy()
+
+
+    def clasificaDato(self, dato, indices):
+
+        distances = np.apply_along_axis(lambda x: self.distance(x,dato),
+                                        1, self.datos[indices][:,:-1])
+
+        indices_ordenados = np.argsort(distances)
+        indices_ordenados = indices_ordenados[:self.k]
+
+        clases_vecinos = self.datos[indices][:,-1][indices_ordenados]
+
+        repeticiones = np.bincount(clases_vecinos)
+
+        return np.argmax(repeticiones)
+
+
+    def clasifica(self, datos, indices=None):
+
+        if indices is None:
+            indices = range(len(datos))
+
+        pred = np.empty(len(indices))
+
+        for dato in datos[indices]:
+            pred[i] = self.clasificaDato(dato)
+
+        return pred

@@ -110,3 +110,39 @@ class Datos(object):
     def __yield__(self):
         for i in range(len(self)):
             yield self.datos[i]
+
+
+    def estadisticas(self, indices=None):
+        r"""Calcula las medias y desviaciones estandard de los datos de la
+            matriz.
+        """
+
+
+        if indices is None:
+            indices = range(self.nDatos)
+
+        est = np.empty((self.nAtributos, 2))
+
+        for i in range(self.nAtributos):
+            est[i, 0] = np.mean(self.datos[indices][:,i])
+            est[i, 1] = np.std(self.datos[indices][:,i])
+
+
+        return est
+
+    def normaliza(self, indices=None):
+        r"""Devuelve el conjunto de datos normalizado con media 0 y desviacion
+            tipica 1.
+        """
+
+        if indices is None:
+            indices = range(self.nDatos)
+
+        est = self.estadisticas(indices)
+        datos = self.datos[indices].copy()
+
+        for i in range(self.nAtributos):
+            datos[:,i] -= est[i,0]
+            datos[:,i] /= est[i,1]
+
+        return datos
