@@ -1,10 +1,32 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-# Pablo Marcos y Dionisio Perez
+# # Práctica 1 - Aprendizaje automático
+# ### Grupo 1463
+# ---------
+#
+# * Pablo Marcos Manchón
+# * Dionisio Pérez Alvear
 
-# Importamos Librerias
+
 import numpy as np
+import collections
+
+
+# Definición de la clase ***Datos*** implementada en la práctica 0.
+#
+# Hemos añadido unas pocas variaciones respecto al diseño original:
+# * Al inicializar puede especificarse el tipo de datos con el que se guarda la matriz de datos (atributo cast).
+#
+#
+# * Métodos `__len__` , `__getitem__` y `__yield__` sobrecargados para utilizar de forma mas cómoda la clase.
+#
+#
+# * El método `extraeDatos` permite indexar por todos los tipos de indices que permite numpy, teniendo en cuenta
+#   que la información se almacena en una matriz ***nDatos x nAtributos*** (contando el atributo correspondiente a la clase).
+#
+# El resto de atributos y funciones se encuentran documentados en el código.
+
 
 class Datos(object):
     """Clase para leer y almacenar los datos de los ficheros .data proporcionados
@@ -97,8 +119,23 @@ class Datos(object):
                 values.sort()
                 self.diccionarios.append({k: v for v, k in enumerate(values)})
 
-
-
-     # TODO: implementar en la practica 1
     def extraeDatos(self, idx):
-        pass
+        return self.datos[idx]
+
+    def __getitem__(self, idx):
+        return self.extraeDatos(idx)
+
+    def __len__(self):
+        return self.nDatos
+
+    def __yield__(self):
+        for i in range(len(self)):
+            yield self.datos[i]
+
+
+#
+# Cargamos el dataset balloons el cual se encuentra en la carpeta `../ConjuntosDatos` e imprimimos los datos cargados.
+#
+if __name__ == '__main__':
+    dataset = Datos('../ConjuntosDatos/balloons.data')
+    print(dataset.datos)
