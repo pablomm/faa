@@ -1,0 +1,61 @@
+Nombre entregable: FAAP1_1463_10.zip (grupo_pareja)
+ Debe contener:
+
+  1. Ipython Notebook. En apartados:
+
+    - Apartado 1: Particionado
+
+    - Apartado 2: Naive-Bayes
+
+    - Apartado 3: Scikit-Learn
+
+    - Apartado 4: Análisis ROC
+
+  2. Ipython Notebook exportado como HTML 
+
+  3. Códigos python necesarios (Clasificador.py, Datos.py, EstrategiaParticionado.py)
+
+  4. Clase RedBayesiana.py para la curva ROC
+
+A continuación las tareas por apartados (tan sólo del punto 1):
+
+ Apartado 1:
+ En los tres tipos de validación (simple, cruzada y bootstrap) realizamos una permutación de los índices para evitar que pueda haber patrones que influyan en el algoritmo.
+ La validación simple es el método más sencillo de los 3. Como partición nos devuelve una única partición compuesta por un conjunto de entrenamiento, y un conjunto de test. El conjunto de entrenamiento viene dado por una serie de índices (el número total viene especificado en el porcentaje) que nos indican qué elementos formarán parte de nuestro conjunto de entrenamiento. El resto de índices no seleccionados, los menos, formarán el conjunto de test.
+ La validación cruzada nos devuelve como partición una lista de particiones. Dado un tamaño del conjunto de test (en realidad nos dan el número de 'folds' que se quieren, pero que coincide con el tamaño del conjunto de test en al menos n-1 subconjuntos), y una vez permutados los índices, se crean las 'n-folds', y en cada iteración una de esas n-folds será el conjunto de test, y el resto el conjunto de entrenamiento.
+ La validación Bootstrap se parece más a la segunda que a la primera. Está validación también devuelve una lista de particiones. Dado un número de particiones, se genera uns lista tomando índices con repetición del conjunto de datos, hasta tener tantos ejemplares como elementos totales hay. Los que no han sido seleccionados ingresan al conjunto de test. Esto se repite tantas veces como particiones se hayan espcificado.
+
+ La principal ventaja de la validación simple radica en su sencillez. No sólo de ejecución, sino también de entendimiento. Las otras dos, siendo más complejas, son también más robustas. La validación cruzada nos ofrece un mñetodo bastante consistente con el que seleccionar diversos conjuntos de test y entrenamiento. La validación Bootstrap, por otra parte, quizá sea la que más se acerque a un modelo real, por el hecho de permitir la repetición de los datos, y no estar condicionando de esta manera a los conjuntos de train y test.
+
+ Apartado 2:
+ A continuación mostramos la ejecución del algoritmo Naive-Bayes para el conjunto de datos Balloons:
+ Sin Laplace:
+   print(dataset.datos[:,-1])
+   print(clasificacion)
+    [1 1 0 0 0 1 1 0 0 0 1 1 0 0 0 1 1 0 0 0]
+    [1 1 0 0 0 1 1 0 0 0 1 1 0 0 0 1 1 0 0 0]
+  Con estos resultados podemos observar como clasifica correctamente, no teniendo ningún error en ninguno de los 20 ejemplos.
+
+  ----------------------------------------------------
+  FALTA CON LAPLACE, Y AMBOS EJEMPLOS PARA TIC-TAC-TOE
+  ----------------------------------------------------
+  FALTA INCLUIR ERROR Y DESVIACIÓN TÍPICA
+  ----------------------------------------------------
+
+Apartado 3:
+A continuación mostramos la ejecución del algoritmo Naive-Bayes implementado con el paquete scikit-learn.
+
+-----------------------------------------
+FALTA ACABAR SCIKIT
+-----------------------------------------
+FALTA INCLUIR TODO LO DEL APARTADO 2 AQUI
+-----------------------------------------
+
+Apartado 4: 
+A continuación mostramos las matrices de confusión y los diagramas del clasificador en el espacio ROC.
+
+------------------------------
+FALTA HACER MATRICES CONFUSION
+------------------------------
+FALTA HACER CURVA ROC
+------------------------------
