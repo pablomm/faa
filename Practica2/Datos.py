@@ -47,7 +47,7 @@ class Datos(object):
             self.tipoAtributos = f.readline().replace('\n','').split(",")
 
             # Numero de atributos
-            self.nAtributos = len(self.tipoAtributos)
+            self.nAtributos = len(self.tipoAtributos) - 1
 
             # Comprobacion atributos
             if any(atr not in Datos.TiposDeAtributos for atr in self.tipoAtributos):
@@ -121,18 +121,17 @@ class Datos(object):
         if indices is None:
             indices = range(self.nDatos)
 
-        est = np.empty((self.nAtributos, 2))
+        est = np.zeros((self.nAtributos, 2))
 
         for i in range(self.nAtributos):
             est[i, 0] = np.mean(self.datos[indices][:,i])
             est[i, 1] = np.std(self.datos[indices][:,i])
 
-
         return est
 
     def normaliza(self, indices=None):
         r"""Devuelve el conjunto de datos normalizado con media 0 y desviacion
-            tipica 1.
+            tipica 1, sin normalizar la clase y devuelve las estadisticas
         """
 
         if indices is None:
@@ -145,4 +144,4 @@ class Datos(object):
             datos[:,i] -= est[i,0]
             datos[:,i] /= est[i,1]
 
-        return datos
+        return datos, est

@@ -196,7 +196,7 @@ class ClasificadorNaiveBayes(Clasificador):
 
             for v in repeticiones:
                 posteriori[c,int(v)] = repeticiones[v]
-para que tengan
+
         # Comprueba si hay que hacer correccion de laplace
         if self.laplace and (posteriori == 0).any():
             posteriori += 1
@@ -235,7 +235,7 @@ para que tengan
                     probabilidades[c] *= self.posteriori[atr][c, int(dato[atr])]
                 else:
                     # Atributo continuo
-                    probabilidades[c] *= norm.ppara que tengandf(dato[atr],
+                    probabilidades[c] *= norm.pdf(dato[atr],
                                                   self.posteriori[atr][c, 0],
                                                   self.posteriori[atr][c, 1])
 
@@ -272,7 +272,7 @@ class ClasificadorVecinosProximos(Clasificador):
         self.k = k
         self.normaliza = normaliza
         if distancia is None:
-            self.distancia = lambda a,b : numpy.linalg.norm(b-a, ord=ord)
+            self.distancia = lambda a,b : np.linalg.norm(b-a, ord=ord)
         else:
             self.distancia = distancia
 
@@ -283,22 +283,26 @@ class ClasificadorVecinosProximos(Clasificador):
         if indices is None:
             indices = range(len(datos))
 
+        self.nAtributos = datos.nAtributos
+
         if self.normaliza:
-            self.datos = datos.normaliza(indices)
+            self.datos, self.est = datos.normaliza(indices)
         else:
             self.datos = datos[indices].copy()
 
+    def clasificaDato(self, dato):
+        if self.normaliza:
+            dato = dato.copy()
+            for i in range(self.nAtributos):
 
-    def clasificaDato(self, dato, indices):
+                dato[i] -= self.est[i,0]
+                dato[i] /= self.est[i,1]
 
-        distances = np.apply_along_axis(lambda x: self.distance(x,dato),
-                                        1, self.datos[indices][:,:-1])
+        distances = np.apply_along_axis(lambda x: self.distancia(x,dato[:self.nAtributos]),
+                                        1, self.datos[:,:-1])
 
-        indices_ordenados = np.argsort(distances)
-        indices_ordenados = indices_ordenados[:self.k]
-
-        clases_vecinos = self.datos[indices][:,-1][indices_ordenados]
-
+        indices_ordenados = np.argsort(distances)[:self.k]
+        clases_vecinos = self.datos[:,-1][indices_ordenados].astype(int)
         repeticiones = np.bincount(clases_vecinos)
 
         return np.argmax(repeticiones)
@@ -311,7 +315,7 @@ class ClasificadorVecinosProximos(Clasificador):
 
         pred = np.empty(len(indices))
 
-        for dato in datos[indices]:
+        for i, dato in enumerate(datos[indices]):
             pred[i] = self.clasificaDato(dato)
 
         return pred
