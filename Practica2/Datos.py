@@ -23,7 +23,7 @@ class Datos(object):
 
     TiposDeAtributos=('Continuo','Nominal')
 
-    def __init__(self, nombreFichero, cast=None):
+    def __init__(self, nombreFichero, cast=np.float):
         """Constructor de la clase Datos
 
         Args:
@@ -70,7 +70,6 @@ class Datos(object):
         # Convertimos la matriz a tipo numerico, en caso de no especificarse
         # Si todos los atributos son nominales usamos el tipo np.int para ahorrar espacio
         # Si hay datos continuos lo guardamos en tipo np.float
-        if cast == None: cast = np.int if all(self.nominalAtributos) else np.float
         self.datos = datosNominales.astype(cast)
 
         # Convertimos los nombres nominales a string en vez de dejarlos en bytes

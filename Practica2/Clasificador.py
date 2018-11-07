@@ -280,6 +280,9 @@ class ClasificadorVecinosProximos(Clasificador):
 
     def entrenamiento(self, datos, indices=None):
 
+        self.nClases = len(datos.diccionarios[-1])
+
+
         if indices is None:
             indices = range(len(datos))
 
@@ -290,7 +293,16 @@ class ClasificadorVecinosProximos(Clasificador):
         else:
             self.datos = datos[indices].copy()
 
+    def probabilidadClase(self, dato):
+
+        return  self.vecinos(dato) / self.k
+
     def clasificaDato(self, dato):
+
+        return np.argmax(self.vecinos(dato))
+
+    def vecinos(self, dato):
+
         if self.normaliza:
             dato = dato.copy()
             for i in range(self.nAtributos):
@@ -303,9 +315,9 @@ class ClasificadorVecinosProximos(Clasificador):
 
         indices_ordenados = np.argsort(distances)[:self.k]
         clases_vecinos = self.datos[:,-1][indices_ordenados].astype(int)
-        repeticiones = np.bincount(clases_vecinos)
+        repeticiones = np.bincount(clases_vecinos, minlength=self.nClases)
 
-        return np.argmax(repeticiones)
+        return repeticiones
 
 
     def clasifica(self, datos, indices=None):
@@ -313,7 +325,7 @@ class ClasificadorVecinosProximos(Clasificador):
         if indices is None:
             indices = range(len(datos))
 
-        pred = np.empty(len(indices))
+        pred = np.empty(len(indices), dtype=int)
 
         for i, dato in enumerate(datos[indices]):
             pred[i] = self.clasificaDato(dato)
@@ -343,6 +355,10 @@ class ClasificadorRegresionLogistica(Clasificador):
             learn_rate = 1/len(indices)
 
         self.nAtributos = len(datos[0]) - 1
+        self.nClases = len(datos.diccionarios[-1])
+
+        if self.nClases != 2:
+            raise ValueError("Solo valido para clasificacion binaria")
 
         w = np.random.uniform(-0.5, 0.5, self.nAtributos + 1)
         #w = np.zeros(self.nAtributos + 1)
@@ -368,14 +384,18 @@ class ClasificadorRegresionLogistica(Clasificador):
 
     def clasificaDato(self, dato):
 
+        return np.argmax(self.probabilidadClase(dato))
+
+    def probabilidadClase(self, dato):
+
         x = np.empty(self.nAtributos + 1)
         x[0] = 1
         x[1:] = dato[:self.nAtributos]
 
         v = self.sigmoidal(self.w, x)
-        print(dato, "x", x,"v",v)
+        #print(dato, "x", x,"v",v)
 
-        return 1 if v >= .5 else 0
+        return np.array((v,1-v))
 
 
     def clasifica(self, datos, indices=None):
