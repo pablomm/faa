@@ -319,3 +319,74 @@ class ClasificadorVecinosProximos(Clasificador):
             pred[i] = self.clasificaDato(dato)
 
         return pred
+
+
+class ClasificadorRegresionLogistica(Clasificador):
+
+    def sigmoidal(self, w, x):
+
+        s = 1./(1. + np.exp(-np.dot(w,x)))
+
+        return s
+
+
+    def entrenamiento(self, datos, indices=None, learn_rate=None, epoch=None):
+
+
+        if indices is None:
+            indices = range(len(datos))
+
+        if epoch is None:
+            epoch = len(indices)
+
+        if learn_rate is None:
+            learn_rate = 1/len(indices)
+
+        self.nAtributos = len(datos[0]) - 1
+
+        w = np.random.uniform(-0.5, 0.5, self.nAtributos + 1)
+        #w = np.zeros(self.nAtributos + 1)
+        x = np.empty(self.nAtributos + 1)
+        x[0] = 1
+
+        for i in range(epoch):
+            #print("epoca", i)
+            #print("w",w)
+            for dato in datos[indices]:
+
+                x[1:] = dato[:-1]
+                t = dato[-1]
+                #print("dato", dato, end=" ")
+                #print("x",x, end=" ")
+                #print("t",t, end=" ")
+                sigma = self.sigmoidal(w, x)
+                #print("sigma", sigma, end=" ")
+                w -= learn_rate * (sigma - t) * x
+                #print("w",w)
+
+        self.w = w
+
+    def clasificaDato(self, dato):
+
+        x = np.empty(self.nAtributos + 1)
+        x[0] = 1
+        x[1:] = dato[:self.nAtributos]
+
+        v = self.sigmoidal(self.w, x)
+        print(dato, "x", x,"v",v)
+
+        return 1 if v >= .5 else 0
+
+
+    def clasifica(self, datos, indices=None):
+        print(self.w)
+        if indices is None:
+            indices = range(len(datos))
+
+
+        pred = np.empty(len(indices), dtype=int)
+
+        for i, dato in enumerate(datos[indices]):
+            pred[i] = self.clasificaDato(dato)
+
+        return pred

@@ -25,7 +25,7 @@ def matriz_confusion(clasificador, datos):
 
     return matriz
 
-    
+
 def curva_roc(clasificador, datos, ax=None):
     r"""Genera una curva ROC
 
