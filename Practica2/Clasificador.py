@@ -339,7 +339,7 @@ class ClasificadorRegresionLogistica(Clasificador):
 
         s = 1./(1. + np.exp(-np.dot(w,x)))
 
-        return s
+        return  s
 
 
     def entrenamiento(self, datos, indices=None, learn_rate=None, epoch=None):
@@ -395,7 +395,7 @@ class ClasificadorRegresionLogistica(Clasificador):
         v = self.sigmoidal(self.w, x)
         #print(dato, "x", x,"v",v)
 
-        return np.array((v,1-v))
+        return np.array((1-v,v))
 
 
     def clasifica(self, datos, indices=None):
