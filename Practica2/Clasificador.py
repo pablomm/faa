@@ -335,6 +335,13 @@ class ClasificadorVecinosProximos(Clasificador):
 
 class ClasificadorRegresionLogistica(Clasificador):
 
+
+    def __init__(self, learn_rate=None, epoch=None):
+        self.learn_rate = learn_rate
+        self.epoch = epoch
+
+        super().__init__()
+
     def sigmoidal(self, w, x):
 
         s = 1./(1. + np.exp(-np.dot(w,x)))
@@ -344,15 +351,19 @@ class ClasificadorRegresionLogistica(Clasificador):
 
     def entrenamiento(self, datos, indices=None, learn_rate=None, epoch=None):
 
-
         if indices is None:
             indices = range(len(datos))
 
-        if epoch is None:
+        if epoch is None and self.epoch is None:
             epoch = len(indices)
 
-        if learn_rate is None:
+        elif epoch is None:
+            epoch = self.epoch
+
+        if learn_rate is None and self.learn_rate is None:
             learn_rate = 1/len(indices)
+        elif learn_rate is None:
+            learn_rate = self.learn_rate
 
         self.nAtributos = len(datos[0]) - 1
         self.nClases = len(datos.diccionarios[-1])
@@ -366,19 +377,12 @@ class ClasificadorRegresionLogistica(Clasificador):
         x[0] = 1
 
         for i in range(epoch):
-            #print("epoca", i)
-            #print("w",w)
             for dato in datos[indices]:
 
                 x[1:] = dato[:-1]
                 t = dato[-1]
-                #print("dato", dato, end=" ")
-                #print("x",x, end=" ")
-                #print("t",t, end=" ")
                 sigma = self.sigmoidal(w, x)
-                #print("sigma", sigma, end=" ")
                 w -= learn_rate * (sigma - t) * x
-                #print("w",w)
 
         self.w = w
 
@@ -393,13 +397,11 @@ class ClasificadorRegresionLogistica(Clasificador):
         x[1:] = dato[:self.nAtributos]
 
         v = self.sigmoidal(self.w, x)
-        #print(dato, "x", x,"v",v)
 
         return np.array((1-v,v))
 
 
     def clasifica(self, datos, indices=None):
-        print(self.w)
         if indices is None:
             indices = range(len(datos))
 
