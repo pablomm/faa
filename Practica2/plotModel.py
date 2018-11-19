@@ -6,7 +6,11 @@ import matplotlib.pyplot as plt
 
 # Autor Luis Lago y Manuel Sanchez Montanes
 # Modificada por Gonzalo
-def plotModel(x,y,clase,clf,title,diccionarios):
+def plotModel(x,y,clase,clf,title,diccionarios, ax =None):
+
+    if ax is None:
+        ax = plt.gca()
+
     x_min, x_max = x.min() - .2, x.max() + .2
     y_min, y_max = y.min() - .2, y.max() + .2
 
@@ -28,18 +32,18 @@ def plotModel(x,y,clase,clf,title,diccionarios):
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
     #ax = plt.subplot(1, 1, 1)
-    plt.contourf(xx, yy, z, cmap=cm, alpha=.8)
-    plt.contour(xx, yy, z, [0.5], linewidths=[2], colors=['k'])
+    ax.contourf(xx, yy, z, cmap=cm, alpha=.8)
+    ax.contour(xx, yy, z, [0.5], linewidths=[2], colors=['k'])
 
     if clase is not None:
-        plt.scatter(x[clase==0], y[clase==0], c='#FF0000')
-        plt.scatter(x[clase==1], y[clase==1], c='#0000FF')
+        ax.scatter(x[clase==0], y[clase==0], c='#FF0000')
+        ax.scatter(x[clase==1], y[clase==1], c='#0000FF')
     else:
-        plt.plot(x,y,'g', linewidth=3)
+        ax.plot(x,y,'g', linewidth=3)
 
-    plt.gca().set_xlim(xx.min(), xx.max())
-    plt.gca().set_ylim(yy.min(), yy.max())
-    plt.grid(True)
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title(title)
+    ax.set_xlim(xx.min(), xx.max())
+    ax.set_ylim(yy.min(), yy.max())
+    ax.grid(True)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.title.set_text(title)

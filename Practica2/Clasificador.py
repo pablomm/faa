@@ -268,13 +268,18 @@ class ClasificadorNaiveBayes(Clasificador):
 
 class ClasificadorVecinosProximos(Clasificador):
 
-    def __init__(self, k=3, normaliza=False, *,distancia=None, ord=2):
+    def __init__(self, k=3, normaliza=False, *,distancia=None, ord=2,
+                    weight='uniform'):
         self.k = k
         self.normaliza = normaliza
         if distancia is None:
             self.distancia = lambda a,b : np.linalg.norm(b-a, ord=ord)
         else:
             self.distancia = distancia
+
+        self.weight = weight
+
+        self.epsilon = np.finfo(float).eps
 
         super().__init__()
 
@@ -301,6 +306,8 @@ class ClasificadorVecinosProximos(Clasificador):
 
         return np.argmax(self.vecinos(dato))
 
+
+
     def vecinos(self, dato):
 
         if self.normaliza:
@@ -315,7 +322,20 @@ class ClasificadorVecinosProximos(Clasificador):
 
         indices_ordenados = np.argsort(distances)[:self.k]
         clases_vecinos = self.datos[:,-1][indices_ordenados].astype(int)
-        repeticiones = np.bincount(clases_vecinos, minlength=self.nClases)
+        if self.weight == 'uniform':
+            repeticiones = np.bincount(clases_vecinos, minlength=self.nClases)
+        elif self.weight == 'distance':
+            distancias = distances[indices_ordenados]
+            repeticiones = np.zeros(self.nClases)
+            for i in range(self.k):
+                repeticiones[clases_vecinos[i]] = 1./max(distancias[i],
+                self.epsilon)
+
+        else:
+            distancias = distances[indices_ordenados]
+            repeticiones = np.zeros(self.nClases)
+            for i in range(self.k):
+                repeticiones[clases_vecinos[i]] = self.weight(distancias[i])
 
         return repeticiones
 
@@ -344,7 +364,15 @@ class ClasificadorRegresionLogistica(Clasificador):
 
     def sigmoidal(self, w, x):
 
-        s = 1./(1. + np.exp(-np.dot(w,x)))
+        wx = np.dot(w,x)
+
+        # Evitar overflows
+        if wx >= 100:
+            return 1
+        elif wx <= -100:
+            return 0
+
+        s = 1./(1. + np.exp(-wx))
 
         return  s
 
