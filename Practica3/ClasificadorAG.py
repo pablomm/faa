@@ -38,20 +38,52 @@ class Representacion(ABC):
 
 class RepresentacionEntera(Representacion):
 
-    def __init__(self, reglas=None, n_intervalos=-1, n_reglas=-1):
+    def __init__(self, reglas=None, n_intervalos=-1, n_reglas=-1, umbral=0.8):
         """Inicializa cromosoma con representación entera.
 
         Si no es espeficiado el array de reglas se utilizara el numero de
         intervalos y el numero de reglas para inicializar el cromosoma
-        aleatoriamente."""
+        aleatoriamente.
+
+        Umbral == exigencia de tener mas de un elemento distinto de 0
+        Si no es especificado, el umbral de generacion será del 0.95
+        """
 
         if reglas is None:
-            self.reglas = np.random.randint(0, n_intervalos + 1, size=n_reglas)
-            self.reglas = np.ones(shape=n_reglas) * 3
-            self.reglas[1:] = 0
+            #self.reglas = np.random.randint(0, n_intervalos + 1, size=n_reglas)
+            #self.reglas = np.ones(shape=n_reglas) * 3
+            #self.reglas[1:] = 0
+            #print("reglas", self.reglas, "nreglas=", n_reglas)
+            a = np.zeros(shape=n_reglas, dtype=int)
+            j = np.random.randint(0, n_intervalos)
+            a[j] = np.random.randint(0, n_intervalos)
+            print("indice", j)
+            while(np.random.randint(0, n_intervalos)/n_intervalos > umbral):
+                j = np.random.randint(0, n_intervalos)
+                print("indice", j)
+                a[j] = np.random.randint(0, n_intervalos)
+            self.reglas = a
         else:
             self.reglas = reglas
 
+
+    def init_poblacion(n_intervalos, size, umbral):
+        """
+        Genero vector a zeros
+        Tomo un indice al azar y lo relleno con un numero al azar
+        Si prob mayor que umbral repito
+        umbral == exigencia de tener mas de un elemento distinto de 0
+        umbral € [0-1]
+        """
+        a = np.zeros(shape=size, dtype=int)
+        j = np.random.randint(0, n_intervalos)
+        a[j] = np.random.randint(0, n_intervalos)
+        while(np.random.randint(0, n_intervalos)/n_intervalos > umbral):
+            j = np.random.randint(0, n_intervalos)
+            a[j] = np.random.randint(0, n_intervalos)
+
+        print(a)
+        return a
 
 
     @staticmethod
@@ -87,7 +119,7 @@ class RepresentacionEntera(Representacion):
 
 
         pred = pred[:,self.reglas != 0].all(axis=1)
-        #print("asd",(pred == True).sum())
+        print("asd",(pred == True).sum())
 
 
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
@@ -115,7 +147,7 @@ class RepresentacionBinaria(Representacion):
             #self.reglas = np.random.randint(0, 1 << (n_intervalos), size=n_reglas) - 1
             #self.reglas = np.repeat((1 << n_intervalos )- 1, n_reglas)
             self.reglas = np.zeros(shape=n_reglas, dtype=int)
-            self.reglas[0] = 10
+            self.reglas[0] = 8
         else:
             self.reglas = reglas
 
@@ -212,12 +244,13 @@ class ClasificadorAG(Clasificador):
         for i in range(tam_poblacion):
             poblacion[i] = self.representacion(n_intervalos=self.n_intervalos,
                                                n_reglas=datos.nAtributos)
-            #print("regla", poblacion[i].reglas)
-            print(poblacion[i].score(matriz))
-
+            print("poblacion", poblacion[i])
+            print("regla", poblacion[i].reglas)
+            print("Score", poblacion[i].score(matriz))
 
 
         print("bin", np.bincount(matriz[:,0].astype(int)).tolist())
+        print("bin log2", np.bincount(np.log2(matriz[:,0].astype(int)).tolist()))
 
 
 
@@ -231,5 +264,5 @@ from Datos import Datos
 
 
 dataset = Datos('../ConjuntosDatos/wdbc.data')
-c = ClasificadorAG(representacion=RepresentacionBinaria)
+c = ClasificadorAG(representacion=RepresentacionEntera)
 c.entrenamiento(dataset, tam_poblacion=1)
