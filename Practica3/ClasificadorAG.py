@@ -16,6 +16,7 @@ import numpy as np
 
 
 
+
 class Representacion(ABC):
 
     @staticmethod
@@ -46,6 +47,8 @@ class RepresentacionEntera(Representacion):
 
         if reglas is None:
             self.reglas = np.random.randint(0, n_intervalos + 1, size=n_reglas)
+            self.reglas = np.ones(shape=n_reglas) * 3
+            self.reglas[1:] = 0
         else:
             self.reglas = reglas
 
@@ -69,6 +72,8 @@ class RepresentacionEntera(Representacion):
             matriz[:,j] /= a
             np.floor(matriz[:,j], out=matriz[:,j])
 
+        matriz[:,:-1] += 1
+
 
         return matriz, maximos, minimos
 
@@ -77,8 +82,12 @@ class RepresentacionEntera(Representacion):
     def score(self, datos_transformados):
         """ datos: Matriz de datos """
 
-        pred = np.equal(datos_transformados[:,:-1], self.reglas).all(axis=1)
+        pred = np.equal(datos_transformados[:,:-1], self.reglas)
 
+
+
+        pred = pred[:,self.reglas != 0].all(axis=1)
+        #print("asd",(pred == True).sum())
 
 
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
@@ -91,7 +100,7 @@ class RepresentacionEntera(Representacion):
         negativa correspondiendo con la prediccion"""
 
         return np.equal(datos_transformados[:,n_atributos],
-                        self.reglas).all(axis=1)
+                        self.reglas)[:,self.reglas!=0].all(axis=1)
 
 class RepresentacionBinaria(Representacion):
 
@@ -104,7 +113,9 @@ class RepresentacionBinaria(Representacion):
 
         if reglas is None:
             #self.reglas = np.random.randint(0, 1 << (n_intervalos), size=n_reglas) - 1
-            self.reglas = np.repeat((1 << n_intervalos )- 1, n_reglas)
+            #self.reglas = np.repeat((1 << n_intervalos )- 1, n_reglas)
+            self.reglas = np.zeros(shape=n_reglas, dtype=int)
+            self.reglas[0] = 10
         else:
             self.reglas = reglas
 
@@ -143,9 +154,11 @@ class RepresentacionBinaria(Representacion):
     def score(self, datos_transformados):
         """ datos: Matriz de datos """
         pred = np.bitwise_and(datos_transformados[:,:-1], self.reglas)
-        pred = np.not_equal(pred, 0).all(axis=1)
+        pred = np.not_equal(pred, 0)
+        pred = pred[:,self.reglas != 0].all(axis=1)
 
-        print(datos_transformados[:,-1])
+        #print(datos_transformados[:,-1])
+        print("asd",(pred == True).sum())
 
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
 
@@ -156,9 +169,12 @@ class RepresentacionBinaria(Representacion):
         """Devuelve un array con el True para la clase positiva y False para la
         negativa correspondiendo con la prediccion"""
 
-        return np.logical_and(datos_transformados[:,n_atributos],
-                        self.reglas).all(axis=1)
+        pred = np.bitwise_and(datos_transformados[:,:n_atributos], self.reglas)
+        pred = np.not_equal(pred, 0)
+        pred = pred[:,self.reglas != 0].all(axis=1)
 
+
+        return pred
 
 
 
@@ -196,17 +212,17 @@ class ClasificadorAG(Clasificador):
         for i in range(tam_poblacion):
             poblacion[i] = self.representacion(n_intervalos=self.n_intervalos,
                                                n_reglas=datos.nAtributos)
-            print("regla", poblacion[i].reglas)
+            #print("regla", poblacion[i].reglas)
             print(poblacion[i].score(matriz))
 
 
 
+        print("bin", np.bincount(matriz[:,0].astype(int)).tolist())
 
 
 
 
-
-        print(matriz)
+        #print(matriz)
 
     def clasifica(self, datos, indices=None):
         pass
