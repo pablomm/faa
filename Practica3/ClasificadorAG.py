@@ -35,55 +35,37 @@ class Representacion(ABC):
     def __str__(self):
         return str(self.reglas)
 
+    def __repr__(self):
+        return str(self.reglas)
 
 class RepresentacionEntera(Representacion):
 
-    def __init__(self, reglas=None, n_intervalos=-1, n_reglas=-1, umbral=0.8):
+    def __init__(self, reglas=None, n_intervalos=-1, n_reglas=-1, umbral=0.1):
         """Inicializa cromosoma con representación entera.
 
         Si no es espeficiado el array de reglas se utilizara el numero de
         intervalos y el numero de reglas para inicializar el cromosoma
         aleatoriamente.
 
-        Umbral == exigencia de tener mas de un elemento distinto de 0
-        Si no es especificado, el umbral de generacion será del 0.95
+        umbral (numeric): porcentaje de reglas no inicializadas a 0.
         """
 
         if reglas is None:
-            #self.reglas = np.random.randint(0, n_intervalos + 1, size=n_reglas)
-            #self.reglas = np.ones(shape=n_reglas) * 3
-            #self.reglas[1:] = 0
-            #print("reglas", self.reglas, "nreglas=", n_reglas)
+
             a = np.zeros(shape=n_reglas, dtype=int)
-            j = np.random.randint(0, n_intervalos)
-            a[j] = np.random.randint(0, n_intervalos)
-            print("indice", j)
-            while(np.random.randint(0, n_intervalos)/n_intervalos > umbral):
-                j = np.random.randint(0, n_intervalos)
-                print("indice", j)
-                a[j] = np.random.randint(0, n_intervalos)
+
+            n_inicializados = max(1, int(umbral*n_reglas))
+
+            indices = np.arange(n_reglas)
+            np.random.shuffle(indices)
+            indices = indices[:n_inicializados]
+
+            inicializacion = np.random.randint(1, n_intervalos+1, n_inicializados)
+            a[indices] = inicializacion
+
             self.reglas = a
         else:
             self.reglas = reglas
-
-
-    def init_poblacion(n_intervalos, size, umbral):
-        """
-        Genero vector a zeros
-        Tomo un indice al azar y lo relleno con un numero al azar
-        Si prob mayor que umbral repito
-        umbral == exigencia de tener mas de un elemento distinto de 0
-        umbral € [0-1]
-        """
-        a = np.zeros(shape=size, dtype=int)
-        j = np.random.randint(0, n_intervalos)
-        a[j] = np.random.randint(0, n_intervalos)
-        while(np.random.randint(0, n_intervalos)/n_intervalos > umbral):
-            j = np.random.randint(0, n_intervalos)
-            a[j] = np.random.randint(0, n_intervalos)
-
-        print(a)
-        return a
 
 
     @staticmethod
@@ -119,7 +101,9 @@ class RepresentacionEntera(Representacion):
 
 
         pred = pred[:,self.reglas != 0].all(axis=1)
+
         print("asd",(pred == True).sum())
+        print("dats", datos_transformados)
 
 
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
@@ -136,7 +120,7 @@ class RepresentacionEntera(Representacion):
 
 class RepresentacionBinaria(Representacion):
 
-    def __init__(self, reglas=None, n_intervalos=-1, n_reglas=-1):
+    def __init__(self, reglas=None, n_intervalos=-1, n_reglas=-1, umbral=.1):
         """Inicializa cromosoma con representación binaria.
 
         Si no es espeficiado el array de reglas se utilizara el numero de
@@ -144,12 +128,25 @@ class RepresentacionBinaria(Representacion):
         aleatoriamente."""
 
         if reglas is None:
-            #self.reglas = np.random.randint(0, 1 << (n_intervalos), size=n_reglas) - 1
-            #self.reglas = np.repeat((1 << n_intervalos )- 1, n_reglas)
-            self.reglas = np.zeros(shape=n_reglas, dtype=int)
-            self.reglas[0] = 8
+
+            a = np.zeros(shape=n_reglas, dtype=int)
+
+            n_inicializados = max(1, int(umbral*n_reglas))
+
+            indices = np.arange(n_reglas)
+            np.random.shuffle(indices)
+            indices = indices[:n_inicializados]
+
+            inicializacion = np.random.randint(0, 1 << n_intervalos,
+                                               n_inicializados)
+            a[indices] = inicializacion
+
+            self.reglas = a
         else:
             self.reglas = reglas
+
+    def __repr__(self):
+        return np.binary_repr(self.reglas)
 
 
 
@@ -189,9 +186,6 @@ class RepresentacionBinaria(Representacion):
         pred = np.not_equal(pred, 0)
         pred = pred[:,self.reglas != 0].all(axis=1)
 
-        #print(datos_transformados[:,-1])
-        print("asd",(pred == True).sum())
-
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
 
 
@@ -218,14 +212,55 @@ class ClasificadorAG(Clasificador):
 
         self.representacion = representacion
 
+    def _inicializar_poblacion(self, tam_poblacion, umbral, nAtributos):
+
+        # Inicializamos la poblacion aleatoriamente
+        poblacion = np.empty(shape=tam_poblacion, dtype=object)
+
+        for i in range(tam_poblacion):
+            poblacion[i] = self.representacion(n_intervalos=self.n_intervalos,
+                                               n_reglas=nAtributos,
+                                               umbral=umbral)
+
+        return poblacion
+
+    def _fitness(self, poblacion, matriz):
+
+        scores = np.zeros(len(poblacion))
+
+        for i, cromo in enumerate(poblacion):
+            scores[i] = cromo.score(matriz)
+
+            print("cromo",cromo, scores[i])
 
 
-    def entrenamiento(self, datos, tam_poblacion=100, n_generaciones=100,
-                      indices=None):
+    def _seleccion_progenitores(self, poblacion, matriz):
+        fitness = self._fitness(poblacion, matriz)
+
+        pass
+
+    def _recombinacion(self, poblacion):
+        pass
+
+    def _mutacion(self, poblacion):
+        pass
+
+    def _seleccion(self, padres, hijos):
+        return hijos
+
+    def _best(self, poblacion):
+        pass
+
+
+
+
+    def entrenamiento(self, datos, tam_poblacion=100, n_generaciones=1,
+                      indices=None, umbral=.1):
 
 
         if self.n_intervalos is None:
             self.n_intervalos = int(np.ceil(1 + 3.322  * np.log10(len(datos))))
+
 
         if indices is None:
             indices = range(len(datos))
@@ -235,22 +270,22 @@ class ClasificadorAG(Clasificador):
                                                                    self.n_intervalos)
 
         # Matriz transformada para nuestra representacion
-        self.matriz = matriz
         self.maximos = maximos
         self.minimos = minimos
 
-        # Inicializamos la poblacion aleatoriamente
-        poblacion = np.empty(shape=tam_poblacion, dtype=object)
-        for i in range(tam_poblacion):
-            poblacion[i] = self.representacion(n_intervalos=self.n_intervalos,
-                                               n_reglas=datos.nAtributos)
-            print("poblacion", poblacion[i])
-            print("regla", poblacion[i].reglas)
-            print("Score", poblacion[i].score(matriz))
+        # inicializacion aleatoria de la poblacion
+        P = self._inicializar_poblacion(tam_poblacion, umbral, datos.nAtributos)
 
+        # Bucle
+        for _ in range(n_generaciones):
+            Pv2 = self._seleccion_progenitores(P, matriz)
+            Pv2 = self._recombinacion(Pv2)
+            Pv2 = self._mutacion(Pv2)
+            P = self._seleccion(P, Pv2)
 
-        print("bin", np.bincount(matriz[:,0].astype(int)).tolist())
-        print("bin log2", np.bincount(np.log2(matriz[:,0].astype(int)).tolist()))
+        # Fuera del bucle
+        self._best(P)
+
 
 
 
@@ -264,5 +299,5 @@ from Datos import Datos
 
 
 dataset = Datos('../ConjuntosDatos/wdbc.data')
-c = ClasificadorAG(representacion=RepresentacionEntera)
-c.entrenamiento(dataset, tam_poblacion=1)
+c = ClasificadorAG(representacion=RepresentacionBinaria)
+c.entrenamiento(dataset, tam_poblacion=2, umbral=.5)
