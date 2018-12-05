@@ -33,10 +33,21 @@ class Representacion(ABC):
 
 
     def __str__(self):
-        return str(self.reglas)
+        return self.__repr__()
+
+    '''
+    def __repr__(self):
+        stri='\nRegla: \n'
+        l = len(self.reglas)
+        stri += 'media: \t' + str(self.reglas[0:int(l/3)]) + '\n'
+        stri += 'standard error \t' + str(self.reglas[int(l/3):int(2*l/3)]) + '\n'
+        stri += 'worst \t' + str(self.reglas[int(2*l/3):])
+        return stri
+    '''
 
     def __repr__(self):
         return str(self.reglas)
+
 
 class RepresentacionEntera(Representacion):
 
@@ -102,8 +113,8 @@ class RepresentacionEntera(Representacion):
 
         pred = pred[:,self.reglas != 0].all(axis=1)
 
-        print("asd",(pred == True).sum())
-        print("dats", datos_transformados)
+        #print("asd",(pred == True).sum())
+        #print("dats", datos_transformados)
 
 
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
@@ -224,6 +235,16 @@ class ClasificadorAG(Clasificador):
 
         return poblacion
 
+    '''
+    Sigmoidal desplazada y contraida para potenciar
+    cromosomas por encima de la media
+    '''
+    def _sigmoid(x, mean):
+        return 5 / (1 + math.exp(-x + mean))
+
+    def _expfitness(self, x, mean):
+        return np.exp(x-mean)
+
     def _fitness(self, poblacion, matriz):
 
         scores = np.zeros(len(poblacion))
@@ -231,18 +252,50 @@ class ClasificadorAG(Clasificador):
         for i, cromo in enumerate(poblacion):
             scores[i] = cromo.score(matriz)
 
-            print("cromo",cromo, scores[i])
+        mean = np.mean(scores)
+        fit = self._expfitness(scores, mean)
 
+        return fit
 
     def _seleccion_progenitores(self, poblacion, matriz):
         fitness = self._fitness(poblacion, matriz)
 
-        pass
+        l = len(poblacion)
+        idx = np.random.choice(l, l, p=fitness/np.sum(fitness), replace=True)
+        #print("Indices", idx)
+        #print("Fitness",fitness/np.sum(fitness))
+        return poblacion[idx]
 
-    def _recombinacion(self, poblacion):
-        pass
+    def _cruce(self, padre, madre):
 
-    def _mutacion(self, poblacion):
+        l = len(padre.reglas)
+        hijo1 = np.zeros(l)
+        hijo2 = np.zeros(l)
+        corte = np.random.randint(1,l-1)
+
+        hijo1[0:corte] = padre.reglas[0:corte]
+        hijo2[0:corte] = madre.reglas[0:corte]
+        hijo1[corte:] = madre.reglas[corte:]
+        hijo2[corte:] = padre.reglas[corte:]
+
+        hijo1 = self.representacion(hijo1)
+        hijo2 = self.representacion(hijo2)
+
+        return hijo1, hijo2
+
+    def _recombinacion(self, poblacion, pc = 0.8):
+        desc = np.empty(len(poblacion), dtype=object)
+        prob = np.random.choice(2, int(len(poblacion)/2)+1, p=[1-pc, pc])
+        for i in range(0,len(poblacion),2):
+            if prob[int(i/2)]==1:
+                desc[i], desc[i+1] = self._cruce(poblacion[i], poblacion[i+1])
+            else:
+                desc[i], desc[i+1] = poblacion[i], poblacion[i+1]
+
+        return desc
+
+    def _mutacion(self, poblacion, pm = 0.1):
+        pm =
         pass
 
     def _seleccion(self, padres, hijos):
@@ -279,8 +332,8 @@ class ClasificadorAG(Clasificador):
         # Bucle
         for _ in range(n_generaciones):
             Pv2 = self._seleccion_progenitores(P, matriz)
-            Pv2 = self._recombinacion(Pv2)
-            Pv2 = self._mutacion(Pv2)
+            Pv2 = self._recombinacion(Pv2, pc)
+            Pv2 = self._mutacion(Pv2, pm)
             P = self._seleccion(P, Pv2)
 
         # Fuera del bucle
@@ -299,5 +352,5 @@ from Datos import Datos
 
 
 dataset = Datos('../ConjuntosDatos/wdbc.data')
-c = ClasificadorAG(representacion=RepresentacionBinaria)
-c.entrenamiento(dataset, tam_poblacion=2, umbral=.5)
+c = ClasificadorAG(representacion=RepresentacionEntera)
+c.entrenamiento(dataset, tam_poblacion=40, umbral=.8)
