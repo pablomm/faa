@@ -79,6 +79,16 @@ class RepresentacionEntera(Representacion):
             self.reglas = reglas
 
 
+    def mutar(self, pm):
+        pm = pm / len(self.reglas)
+
+        idx = np.random.choice(2, len(self.reglas), p=[1-pm, pm])
+
+
+
+
+
+
     @staticmethod
     def transformar(datos, n_atributos, n_intervalos, maximos=None, minimos=None):
         """transforma la matriz para utilizar la representacion entera"""
@@ -295,8 +305,9 @@ class ClasificadorAG(Clasificador):
         return desc
 
     def _mutacion(self, poblacion, pm = 0.1):
-        pm =
-        pass
+
+        for individuo in poblacion:
+            individuo.mutar(pm)
 
     def _seleccion(self, padres, hijos):
         return hijos
