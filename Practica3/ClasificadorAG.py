@@ -78,11 +78,24 @@ class RepresentacionEntera(Representacion):
         else:
             self.reglas = reglas
 
+        self.n_intervalos = n_intervalos
 
     def mutar(self, pm):
         pm = pm / len(self.reglas)
 
         idx = np.random.choice(2, len(self.reglas), p=[1-pm, pm])
+        num = idx.sum()
+        if num != 0:
+            mutan = np.random.randint(1, self.n_intervalos, size=num)
+            reglas = self.reglas.copy()
+            reglas[idx == 1] = mutan
+
+            return RepresentacionEntera(reglas, n_intervalos=self.n_intervalos)
+
+
+        else:
+            return self
+
 
 
 
@@ -122,9 +135,6 @@ class RepresentacionEntera(Representacion):
 
 
         pred = pred[:,self.reglas != 0].all(axis=1)
-
-        #print("asd",(pred == True).sum())
-        #print("dats", datos_transformados)
 
 
         return (pred == datos_transformados[:,-1]).sum() / len(datos_transformados)
@@ -166,8 +176,10 @@ class RepresentacionBinaria(Representacion):
         else:
             self.reglas = reglas
 
-    def __repr__(self):
-        return np.binary_repr(self.reglas)
+        self.n_intervalos = n_intervalos
+
+
+
 
 
 
@@ -223,6 +235,23 @@ class RepresentacionBinaria(Representacion):
 
         return pred
 
+    def mutar(self, pm):
+        pm = pm / len(self.reglas)
+
+        idx = np.random.choice(2, len(self.reglas), p=[1-pm, pm])
+        num = idx.sum()
+        if num != 0:
+            mutan = 1 << np.random.randint(1, self.n_intervalos, size=num)
+
+            reglas = self.reglas.copy()
+            reglas[idx == 1] = np.bitwise_xor(reglas[idx == 1], mutan)
+
+            return RepresentacionBinaria(reglas, n_intervalos=self.n_intervalos)
+
+
+        else:
+            return self
+
 
 
 class ClasificadorAG(Clasificador):
@@ -262,25 +291,23 @@ class ClasificadorAG(Clasificador):
         for i, cromo in enumerate(poblacion):
             scores[i] = cromo.score(matriz)
 
-        mean = np.mean(scores)
-        fit = self._expfitness(scores, mean)
+        #mean = np.mean(scores)
+        #fit = self._expfitness(scores, mean)
 
-        return fit
+        return scores
 
-    def _seleccion_progenitores(self, poblacion, matriz):
-        fitness = self._fitness(poblacion, matriz)
+    def _seleccion_progenitores(self, poblacion, fitness):
 
         l = len(poblacion)
         idx = np.random.choice(l, l, p=fitness/np.sum(fitness), replace=True)
-        #print("Indices", idx)
-        #print("Fitness",fitness/np.sum(fitness))
+
         return poblacion[idx]
 
     def _cruce(self, padre, madre):
 
         l = len(padre.reglas)
-        hijo1 = np.zeros(l)
-        hijo2 = np.zeros(l)
+        hijo1 = np.zeros(l, dtype=np.int16)
+        hijo2 = np.zeros(l, dtype=np.int16)
         corte = np.random.randint(1,l-1)
 
         hijo1[0:corte] = padre.reglas[0:corte]
@@ -288,8 +315,8 @@ class ClasificadorAG(Clasificador):
         hijo1[corte:] = madre.reglas[corte:]
         hijo2[corte:] = padre.reglas[corte:]
 
-        hijo1 = self.representacion(hijo1)
-        hijo2 = self.representacion(hijo2)
+        hijo1 = self.representacion(hijo1, n_intervalos = self.n_intervalos)
+        hijo2 = self.representacion(hijo2, n_intervalos = self.n_intervalos)
 
         return hijo1, hijo2
 
@@ -306,25 +333,46 @@ class ClasificadorAG(Clasificador):
 
     def _mutacion(self, poblacion, pm = 0.1):
 
-        for individuo in poblacion:
-            individuo.mutar(pm)
+        for i, individuo in enumerate(poblacion):
+            poblacion[i] = individuo.mutar(pm)
 
-    def _seleccion(self, padres, hijos):
-        return hijos
+        return poblacion
 
-    def _best(self, poblacion):
-        pass
+    def _seleccion(self, padres, hijos, fitness_P, fitness_H, elitismo=False):
+
+        if elitismo == False:
+            return hijos, fitness_H
+        else:
+            idx_P = np.argsort(fitness_P)
+            idx_H = np.argsort(fitness_H)
+
+            fitness = np.hstack((fitness_P[idx_P[:2]], fitness_H[idx_H[:-2]]))
+            poblacion = np.hstack((padres[idx_P[:2]], hijos[idx_H[:-2]]))
+
+            return poblacion, fitness
 
 
 
 
-    def entrenamiento(self, datos, tam_poblacion=100, n_generaciones=1,
-                      indices=None, umbral=.1):
+    def _best(self, poblacion, fitness):
+
+        index = np.argmax(fitness)
+
+        return poblacion[index], fitness[index]
+
+
+
+
+    def entrenamiento(self, datos, tam_poblacion=100, n_generaciones=1000,
+                      indices=None, umbral=.1, pc=0.8, pm=0.1, elitismo=False,
+                      parada=None):
 
 
         if self.n_intervalos is None:
             self.n_intervalos = int(np.ceil(1 + 3.322  * np.log10(len(datos))))
 
+        if parada is None:
+            parada = n_generaciones // 10
 
         if indices is None:
             indices = range(len(datos))
@@ -336,25 +384,42 @@ class ClasificadorAG(Clasificador):
         # Matriz transformada para nuestra representacion
         self.maximos = maximos
         self.minimos = minimos
+        self.champion = None
+        self.champion_fitness = 0
+
 
         # inicializacion aleatoria de la poblacion
         P = self._inicializar_poblacion(tam_poblacion, umbral, datos.nAtributos)
-
+        fitness_P = self._fitness(P, matriz)
+        j = 0
         # Bucle
-        for _ in range(n_generaciones):
-            Pv2 = self._seleccion_progenitores(P, matriz)
-            Pv2 = self._recombinacion(Pv2, pc)
-            Pv2 = self._mutacion(Pv2, pm)
-            P = self._seleccion(P, Pv2)
+        for i in range(n_generaciones):
+            print("Generacion", i, end="\r")
+            H = self._seleccion_progenitores(P, fitness_P)
+            H = self._recombinacion(H, pc)
+            H = self._mutacion(H, pm)
+            fitness_H = self._fitness(H, matriz)
+            P, fitness_P = self._seleccion(P, H, fitness_P, fitness_H, elitismo)
 
-        # Fuera del bucle
-        self._best(P)
+            # Fuera del bucle jaja no
+            best_gen, a = self._best(P, fitness_P)
+
+            if a > self.champion_fitness:
+                print("¡Tenemos nuevo campeón en gen ",i,"! -->", a)
+                self.champion = best_gen
+                self.champion_fitness = a
+                j = 0
+
+            j += 1
+
+            if parada != 0 and j > parada:
+                print("Your time has run OUUUUUT!!", i)
+                break
+
+        print("campeon: ", self.champion)
 
 
 
-
-
-        #print(matriz)
 
     def clasifica(self, datos, indices=None):
         pass
@@ -364,4 +429,23 @@ from Datos import Datos
 
 dataset = Datos('../ConjuntosDatos/wdbc.data')
 c = ClasificadorAG(representacion=RepresentacionEntera)
-c.entrenamiento(dataset, tam_poblacion=40, umbral=.8)
+
+pcs = [0.7, 0.8, 0.9]
+pms = [0.5, 0.1, 0.15]
+tams = [500]
+generaciones = [100, 500, 1000, 10000]
+elite = [True, False]
+i = 0
+for tam in tams:
+    for gen in generaciones:
+        for pc in pcs:
+            for pm in pms:
+                for e in elite:
+                    i+=1
+                    print("[",i,"] Tamaño", tam, "Gen", gen, "pc", pc, "pm", pm, "elite", e)
+                    c.entrenamiento(dataset, tam_poblacion=tam, n_generaciones=gen,
+                                  umbral=.1, pc=pc, pm=pm, elitismo=e)
+
+# pm <=.1,
+# pc = 0.8
+# elite False
