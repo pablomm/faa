@@ -14,6 +14,8 @@ from Clasificador import Clasificador
 from abc import ABC, abstractmethod
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 
 
 
@@ -35,15 +37,6 @@ class Representacion(ABC):
     def __str__(self):
         return self.__repr__()
 
-    '''
-    def __repr__(self):
-        stri='\nRegla: \n'
-        l = len(self.reglas)
-        stri += 'media: \t' + str(self.reglas[0:int(l/3)]) + '\n'
-        stri += 'standard error \t' + str(self.reglas[int(l/3):int(2*l/3)]) + '\n'
-        stri += 'worst \t' + str(self.reglas[int(2*l/3):])
-        return stri
-    '''
 
     def __repr__(self):
         return str(self.reglas)
@@ -97,11 +90,6 @@ class RepresentacionEntera(Representacion):
             return self
 
 
-
-
-
-
-
     @staticmethod
     def transformar(datos, n_atributos, n_intervalos, maximos=None, minimos=None):
         """transforma la matriz para utilizar la representacion entera"""
@@ -146,8 +134,13 @@ class RepresentacionEntera(Representacion):
         """Devuelve un array con el True para la clase positiva y False para la
         negativa correspondiendo con la prediccion"""
 
-        return np.equal(datos_transformados[:,n_atributos],
-                        self.reglas)[:,self.reglas!=0].all(axis=1)
+        pred = np.equal(datos_transformados[:,:n_atributos], self.reglas)
+
+
+
+        pred = pred[:,self.reglas != 0].all(axis=1)
+
+        return pred
 
 class RepresentacionBinaria(Representacion):
 
@@ -232,7 +225,6 @@ class RepresentacionBinaria(Representacion):
         pred = np.not_equal(pred, 0)
         pred = pred[:,self.reglas != 0].all(axis=1)
 
-
         return pred
 
     def mutar(self, pm):
@@ -274,16 +266,6 @@ class ClasificadorAG(Clasificador):
 
         return poblacion
 
-    '''
-    Sigmoidal desplazada y contraida para potenciar
-    cromosomas por encima de la media
-    '''
-    def _sigmoid(x, mean):
-        return 5 / (1 + math.exp(-x + mean))
-
-    def _expfitness(self, x, mean):
-        return np.exp(x-mean)
-
     def _fitness(self, poblacion, matriz):
 
         scores = np.zeros(len(poblacion))
@@ -291,8 +273,8 @@ class ClasificadorAG(Clasificador):
         for i, cromo in enumerate(poblacion):
             scores[i] = cromo.score(matriz)
 
-        #mean = np.mean(scores)
-        #fit = self._expfitness(scores, mean)
+        if self.invertir:
+            scores = 1 - scores
 
         return scores
 
@@ -306,9 +288,14 @@ class ClasificadorAG(Clasificador):
     def _cruce(self, padre, madre):
 
         l = len(padre.reglas)
+
         hijo1 = np.zeros(l, dtype=np.int16)
         hijo2 = np.zeros(l, dtype=np.int16)
-        corte = np.random.randint(1,l-1)
+
+        if l == 2:
+            corte = 1
+        else:
+            corte = np.random.randint(1,l-1)
 
         hijo1[0:corte] = padre.reglas[0:corte]
         hijo2[0:corte] = madre.reglas[0:corte]
@@ -365,17 +352,21 @@ class ClasificadorAG(Clasificador):
 
     def entrenamiento(self, datos, tam_poblacion=100, n_generaciones=1000,
                       indices=None, umbral=.1, pc=0.8, pm=0.1, elitismo=False,
-                      parada=None):
+                      parada=None, invertir=False, plot=False, verbose=False):
 
+
+        self.invertir = invertir
 
         if self.n_intervalos is None:
             self.n_intervalos = int(np.ceil(1 + 3.322  * np.log10(len(datos))))
 
         if parada is None:
-            parada = n_generaciones // 10
+            parada = n_generaciones
 
         if indices is None:
             indices = range(len(datos))
+
+        self.nAtributos = datos.nAtributos
 
         matriz, maximos, minimos = self.representacion.transformar(datos[indices],
                                                                    datos.nAtributos,
@@ -387,6 +378,10 @@ class ClasificadorAG(Clasificador):
         self.champion = None
         self.champion_fitness = 0
 
+        if plot:
+            fitness_medio = np.zeros(n_generaciones+1)
+            fitness_mejor = np.zeros(n_generaciones+1)
+
 
         # inicializacion aleatoria de la poblacion
         P = self._inicializar_poblacion(tam_poblacion, umbral, datos.nAtributos)
@@ -394,58 +389,66 @@ class ClasificadorAG(Clasificador):
         j = 0
         # Bucle
         for i in range(n_generaciones):
-            print("Generacion", i, end="\r")
+
+            if verbose:
+                print("Generacion", i, end="\r")
+
             H = self._seleccion_progenitores(P, fitness_P)
             H = self._recombinacion(H, pc)
             H = self._mutacion(H, pm)
             fitness_H = self._fitness(H, matriz)
             P, fitness_P = self._seleccion(P, H, fitness_P, fitness_H, elitismo)
 
-            # Fuera del bucle jaja no
             best_gen, a = self._best(P, fitness_P)
 
             if a > self.champion_fitness:
-                print("¡Tenemos nuevo campeón en gen ",i,"! -->", a)
                 self.champion = best_gen
                 self.champion_fitness = a
                 j = 0
 
             j += 1
 
-            if parada != 0 and j > parada:
-                print("Your time has run OUUUUUT!!", i)
+            if j > parada:
                 break
 
-        print("campeon: ", self.champion)
+            if plot:
+                fitness_medio[i+1] = np.mean(fitness_P)
+                fitness_mejor[i+1] = self.champion_fitness
 
+        if plot:
+            fig, ax1 = plt.subplots()
+            fig, ax2 = plt.subplots()
+            ax1.title.set_text("Evolución mejor fitness")
+            ax1.set_xlabel("Número de generación")
+            ax1.set_ylim((0,1))
+            ax1.set_ylabel("Fitness")
+            ax2.title.set_text("Evolución fitness medio")
+            ax2.set_xlabel("Número de generación")
+            ax2.set_ylabel("Fitness medio")
+            ax2.set_ylim((0,1))
 
+            gens = range(0,n_generaciones+1)
 
+            ax1.plot(gens, fitness_mejor)
+            ax1.scatter(gens, fitness_mejor)
+            ax2.plot(gens, fitness_medio)
+            ax2.scatter(gens, fitness_medio)
+            plt.show()
 
     def clasifica(self, datos, indices=None):
-        pass
 
-from Datos import Datos
+        if indices != None:
+            datos = datos[indices]
 
+        datos_transformados, _, _ =  self.representacion.transformar(datos,
+                                                               self.nAtributos,
+                                                               self.n_intervalos,
+                                                               self.maximos,
+                                                               self.minimos)
 
-dataset = Datos('../ConjuntosDatos/wdbc.data')
-c = ClasificadorAG(representacion=RepresentacionEntera)
+        pred = self.champion.evaluar(datos_transformados, self.nAtributos)
 
-pcs = [0.7, 0.8, 0.9]
-pms = [0.5, 0.1, 0.15]
-tams = [500]
-generaciones = [100, 500, 1000, 10000]
-elite = [True, False]
-i = 0
-for tam in tams:
-    for gen in generaciones:
-        for pc in pcs:
-            for pm in pms:
-                for e in elite:
-                    i+=1
-                    print("[",i,"] Tamaño", tam, "Gen", gen, "pc", pc, "pm", pm, "elite", e)
-                    c.entrenamiento(dataset, tam_poblacion=tam, n_generaciones=gen,
-                                  umbral=.1, pc=pc, pm=pm, elitismo=e)
+        if self.invertir:
+            pred = ~pred
 
-# pm <=.1,
-# pc = 0.8
-# elite False
+        return pred
