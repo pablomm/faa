@@ -437,7 +437,7 @@ class ClasificadorAG(Clasificador):
 
     def clasifica(self, datos, indices=None):
 
-        if indices != None:
+        if indices is not None:
             datos = datos[indices]
 
         datos_transformados, _, _ =  self.representacion.transformar(datos,

@@ -67,7 +67,7 @@ class Clasificador:
         return 1 - np.sum(np.equal(pred, clases))/len(pred)
 
     @staticmethod
-    def validacion(particionado, dataset, clasificador, seed=None):
+    def validacion(particionado, dataset, clasificador, seed=None, **kwargs):
         r"""Metodo para realizar validacion de un clasificador.
 
             Args:
@@ -88,8 +88,8 @@ class Clasificador:
         # Calculamos los errores para cada particion
         for i, particion in enumerate(particiones):
 
-            clasificador.entrenamiento(dataset, particion.indicesTrain)
-            pred = clasificador.clasifica(dataset, particion.indicesTest)
+            clasificador.entrenamiento(dataset, indices=particion.indicesTrain, **kwargs)
+            pred = clasificador.clasifica(dataset, indices=particion.indicesTest)
             errores[i] = Clasificador.error(dataset, pred, particion.indicesTest)
 
         return errores
